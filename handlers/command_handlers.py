@@ -12,9 +12,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     welcome_message = f"""
 👋 Hello {user.first_name}! 
 
-Welcome to the Telegram Bot! 
-
-I'm here to help you. Use /help to see available commands.
+Send me a video to store it, then use @{context.bot.username} in any chat to send it.
     """
     
     await update.message.reply_text(welcome_message)
@@ -22,44 +20,33 @@ I'm here to help you. Use /help to see available commands.
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the /help command."""
     help_text = """
-🤖 **Available Commands:**
+📹 **Video Bot Commands:**
 
-/start - Start the bot and get a welcome message
+/start - Start the bot
 /help - Show this help message
-/status - Check bot status
-
-📹 **Video Commands:**
-- Send a video to store it
-- /sendTheVideo <user_id> - Send stored video to a user
-- /clearVideo - Clear stored video
-- /videoStatus - Check if video is stored
+/clearVideo - Clear stored video
+/videoStatus - Check if video is stored
 
 💬 **Inline Usage:**
-- Type `@your_bot_username` in any chat to send the stored video
+- Type `@{context.bot.username}` in any chat to send the stored video
 - Works in private chats, groups, and channels
-
-**Features:**
-- Basic command handling
-- Message processing
-- Video forwarding system
-- Extensible architecture
-
-For more information, check the README file.
     """
     
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /status command."""
-    status_message = """
-✅ **Bot Status:**
-- Bot is running
-- All systems operational
-- Ready to process commands
-    """
+async def clear_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Clear the stored video."""
+    from handlers.video_handlers import stored_video
+    global stored_video
     
-    await update.message.reply_text(status_message, parse_mode='Markdown')
+    stored_video = None
+    await update.message.reply_text("🗑️ Stored video cleared.")
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Echo the user message."""
-    await update.message.reply_text(update.message.text)
+async def video_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Check if a video is stored."""
+    from handlers.video_handlers import stored_video
+    
+    if stored_video:
+        await update.message.reply_text("✅ A video is currently stored and ready to send.")
+    else:
+        await update.message.reply_text("❌ No video is currently stored.")
