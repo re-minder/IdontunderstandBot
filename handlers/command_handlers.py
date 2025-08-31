@@ -36,9 +36,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def clear_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clear the stored video."""
-    from handlers.video_handlers import stored_video
-    
-    # Import the module and clear the variable
     import handlers.video_handlers
     handlers.video_handlers.stored_video = None
     
@@ -46,9 +43,9 @@ async def clear_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def video_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Check if a video is stored."""
-    from handlers.video_handlers import stored_video
+    import handlers.video_handlers
     
-    if stored_video:
+    if handlers.video_handlers.stored_video:
         await update.message.reply_text("✅ A video is currently stored and ready to send.")
     else:
         await update.message.reply_text("❌ No video is currently stored.")

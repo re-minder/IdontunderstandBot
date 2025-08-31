@@ -4,14 +4,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Import the stored video from video_handlers
-from .video_handlers import stored_video
+# Import the video_handlers module to access stored_video
+import handlers.video_handlers
 
 async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle inline queries."""
     query = update.inline_query.query
     
-    if not stored_video:
+    if not handlers.video_handlers.stored_video:
         # No video stored
         results = [
             InlineQueryResultVideo(
@@ -33,7 +33,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 id="1",
                 title="Send stored video",
                 description="Click to send the stored video in this chat",
-                video_file_id=stored_video,
+                video_file_id=handlers.video_handlers.stored_video,
                 input_message_content=InputTextMessageContent(
                     message_text="📹 Video sent via inline bot"
                 )
