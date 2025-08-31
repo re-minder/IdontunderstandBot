@@ -19,7 +19,6 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 title="No video stored",
                 description="Send a video to the bot first to store it",
                 video_url="https://example.com/placeholder.mp4",
-                thumb_url="https://example.com/placeholder.jpg",
                 input_message_content=InputTextMessageContent(
                     message_text=f"❌ No video stored. Send a video to @{context.bot.username} first."
                 )
