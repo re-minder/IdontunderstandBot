@@ -19,7 +19,7 @@ Send me a video to store it, then use @{context.bot.username} in any chat to sen
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the /help command."""
-    help_text = """
+    help_text = f"""
 📹 **Video Bot Commands:**
 
 /start - Start the bot
@@ -37,9 +37,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def clear_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clear the stored video."""
     from handlers.video_handlers import stored_video
-    global stored_video
     
-    stored_video = None
+    # Import the module and clear the variable
+    import handlers.video_handlers
+    handlers.video_handlers.stored_video = None
+    
     await update.message.reply_text("🗑️ Stored video cleared.")
 
 async def video_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
