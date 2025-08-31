@@ -28,9 +28,20 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /help - Show this help message
 /status - Check bot status
 
+📹 **Video Commands:**
+- Send a video to store it
+- /sendTheVideo <user_id> - Send stored video to a user
+- /clearVideo - Clear stored video
+- /videoStatus - Check if video is stored
+
+💬 **Inline Usage:**
+- Type `@your_bot_username` in any chat to send the stored video
+- Works in private chats, groups, and channels
+
 **Features:**
 - Basic command handling
 - Message processing
+- Video forwarding system
 - Extensible architecture
 
 For more information, check the README file.
