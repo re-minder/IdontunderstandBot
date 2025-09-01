@@ -13,14 +13,18 @@ from telegram.ext import Application, CommandHandler, MessageHandler, InlineQuer
 # Load environment variables
 load_dotenv()
 
-# Configure logging to file
+# Configure logging (avoid file writes on serverless read-only FS)
+handlers_list = [logging.StreamHandler()]
+try:
+    handlers_list.append(logging.FileHandler('bot.log'))
+except OSError:
+    # Read-only FS (e.g., Vercel). Skip file logging.
+    pass
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.WARNING,
-    handlers=[
-        logging.FileHandler('bot.log'),
-        logging.StreamHandler()
-    ]
+    handlers=handlers_list
 )
 logger = logging.getLogger(__name__)
 # Suppress noisy third-party loggers
