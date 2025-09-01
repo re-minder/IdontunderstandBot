@@ -59,6 +59,19 @@ async def health_root() -> dict:
                 logger.info(f"Bot get_me warmed in {bot_ms}ms on GET /")
             except Exception as exc:
                 logger.exception("Failed to warm bot.get_me on GET /", exc_info=exc)
+            # Warm Upstash Redis (if configured) to pre-establish outbound connection
+            try:
+                if getattr(bot_module, 'redis_client', None) is not None:
+                    kv_start_ns = _t.time()
+                    try:
+                        # Lightweight GET; key may or may not exist
+                        bot_module.redis_client.get('stored_video')
+                    except Exception:
+                        pass
+                    kv_ms = int((_t.time() - kv_start_ns) * 1000)
+                    logger.info(f"Redis warm GET completed in {kv_ms}ms on GET /")
+            except Exception as exc:
+                logger.exception("Failed to warm Redis on GET /", exc_info=exc)
         except Exception as exc:
             logger.exception("Failed to initialize PTB app on GET /", exc_info=exc)
             # Still return ok
@@ -91,6 +104,18 @@ async def health_full(request: Request) -> dict:
                 logger.info(f"Bot get_me warmed in {bot_ms}ms on GET /api/bot")
             except Exception as exc:
                 logger.exception("Failed to warm bot.get_me on GET /api/bot", exc_info=exc)
+            # Warm Upstash Redis (if configured) to pre-establish outbound connection
+            try:
+                if getattr(bot_module, 'redis_client', None) is not None:
+                    kv_start_ns = _t.time()
+                    try:
+                        bot_module.redis_client.get('stored_video')
+                    except Exception:
+                        pass
+                    kv_ms = int((_t.time() - kv_start_ns) * 1000)
+                    logger.info(f"Redis warm GET completed in {kv_ms}ms on GET /api/bot")
+            except Exception as exc:
+                logger.exception("Failed to warm Redis on GET /api/bot", exc_info=exc)
         except Exception as exc:
             logger.exception("Failed to initialize PTB app on GET /api/bot", exc_info=exc)
             # Still return ok
@@ -108,6 +133,18 @@ async def health_full(request: Request) -> dict:
             logger.info(f"Forced warm: bot.get_me took {bot_ms}ms on GET /api/bot?warm=1")
         except Exception as exc:
             logger.exception("Forced warm failed on GET /api/bot?warm=1", exc_info=exc)
+        # Force warm Redis as well
+        try:
+            if getattr(bot_module, 'redis_client', None) is not None:
+                kv_start_ns = _t.time()
+                try:
+                    bot_module.redis_client.get('stored_video')
+                except Exception:
+                    pass
+                kv_ms = int((_t.time() - kv_start_ns) * 1000)
+                logger.info(f"Forced warm: Redis GET took {kv_ms}ms on GET /api/bot?warm=1")
+        except Exception as exc:
+            logger.exception("Forced warm Redis failed on GET /api/bot?warm=1", exc_info=exc)
     return {"ok": True}
 
 
