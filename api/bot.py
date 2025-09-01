@@ -21,6 +21,7 @@ app = FastAPI()
 
 # Create a single Application instance reused across warm invocations
 ptb_app = Application.builder().token(TOKEN).build()
+_initialized = False
 
 # Register the same handlers as in polling mode
 ptb_app.add_handler(CommandHandler("start", bot_module.start))
@@ -29,21 +30,6 @@ ptb_app.add_handler(CommandHandler("status", bot_module.status))
 ptb_app.add_handler(MessageHandler(filters.VIDEO, bot_module.store_video_handler))
 ptb_app.add_handler(InlineQueryHandler(bot_module.inline_query_handler))
 ptb_app.add_error_handler(bot_module.on_error)
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    # Initialize and start PTB application once on cold start
-    await ptb_app.initialize()
-    await ptb_app.start()
-    logger.info("PTB Application initialized")
-
-
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
-    # Graceful shutdown
-    await ptb_app.stop()
-    await ptb_app.shutdown()
 
 
 @app.get("/")
@@ -56,6 +42,16 @@ async def health_full() -> dict:
 
 
 async def _process_webhook(request: Request) -> dict:
+    global _initialized
+    if not _initialized:
+        try:
+            await ptb_app.initialize()
+            _initialized = True
+            logger.info("PTB Application initialized (lazy)")
+        except Exception as exc:
+            logger.exception("Failed to initialize PTB app", exc_info=exc)
+            # Still return 200 to avoid Telegram retries storm
+            return {"ok": True}
     # Optional secret verification (recommended)
     secret = os.getenv("WEBHOOK_SECRET")
     if secret:
