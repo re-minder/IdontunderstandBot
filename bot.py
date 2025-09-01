@@ -136,6 +136,7 @@ async def inline_query_handler(update: Update, context):
     logger.info(f"Inline query - stored video: {stored_video}")
     logger.info(f"Inline query - stored video type: {type(stored_video)}")
     logger.info(f"Inline query - stored video is None: {stored_video is None}")
+    _start_inline = time.time()
     
     if not stored_video:
         # No video stored
@@ -155,7 +156,7 @@ async def inline_query_handler(update: Update, context):
     else:
         # Video is stored
         # Add a small time bucket to the result id to mitigate Telegram client cache per chat
-        time_bucket = int(time.time() // 300)  # 5-minute buckets
+        time_bucket = int(time.time() // 60)  # 1-minute buckets to reduce stale results
         results = [
             InlineQueryResultCachedVideo(
                 id=f"vid_{stored_video[-32:]}_{time_bucket}",
@@ -167,8 +168,12 @@ async def inline_query_handler(update: Update, context):
     
     try:
         await update.inline_query.answer(results, cache_time=0, is_personal=True)
+        _elapsed_ms = int((time.time() - _start_inline) * 1000)
+        logger.info(f"Inline answer sent in {_elapsed_ms}ms (has_video={bool(stored_video)})")
     except NetworkError as exc:
         if "Event loop is closed" in str(exc):
+            _elapsed_ms = int((time.time() - _start_inline) * 1000)
+            logger.warning(f"Inline answer aborted due to shutdown after {_elapsed_ms}ms")
             return
         raise
 

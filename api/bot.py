@@ -34,10 +34,50 @@ ptb_app.add_error_handler(bot_module.on_error)
 
 @app.get("/")
 async def health_root() -> dict:
+    # Warm initialization on health check to reduce cold start latency
+    global _initialized
+    if not _initialized:
+        try:
+            import time as _t
+            start_ns = _t.time()
+            await ptb_app.initialize()
+            _initialized = True
+            init_ms = int((_t.time() - start_ns) * 1000)
+            logger.info(f"PTB Application initialized via GET / in {init_ms}ms")
+            try:
+                state_start_ns = _t.time()
+                bot_module.load_state()
+                state_ms = int((_t.time() - state_start_ns) * 1000)
+                logger.info(f"State loaded on GET / in {state_ms}ms")
+            except Exception as exc:
+                logger.exception("Failed to load state on GET /", exc_info=exc)
+        except Exception as exc:
+            logger.exception("Failed to initialize PTB app on GET /", exc_info=exc)
+            # Still return ok
     return {"ok": True}
 
 @app.get("/api/bot")
 async def health_full() -> dict:
+    # Warm initialization on health check to reduce cold start latency
+    global _initialized
+    if not _initialized:
+        try:
+            import time as _t
+            start_ns = _t.time()
+            await ptb_app.initialize()
+            _initialized = True
+            init_ms = int((_t.time() - start_ns) * 1000)
+            logger.info(f"PTB Application initialized via GET /api/bot in {init_ms}ms")
+            try:
+                state_start_ns = _t.time()
+                bot_module.load_state()
+                state_ms = int((_t.time() - state_start_ns) * 1000)
+                logger.info(f"State loaded on GET /api/bot in {state_ms}ms")
+            except Exception as exc:
+                logger.exception("Failed to load state on GET /api/bot", exc_info=exc)
+        except Exception as exc:
+            logger.exception("Failed to initialize PTB app on GET /api/bot", exc_info=exc)
+            # Still return ok
     return {"ok": True}
 
 
