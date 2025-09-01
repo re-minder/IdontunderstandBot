@@ -9,6 +9,7 @@ import logging
 from dotenv import load_dotenv
 from telegram import Update, InlineQueryResultVideo, InputTextMessageContent, InputFile, InlineQueryResultCachedVideo
 from telegram.ext import Application, CommandHandler, MessageHandler, InlineQueryHandler, filters
+from telegram.error import NetworkError
 
 # Load environment variables
 load_dotenv()
@@ -124,7 +125,12 @@ async def inline_query_handler(update: Update, context):
             )
         ]
     
-    await update.inline_query.answer(results, cache_time=0, is_personal=True)
+    try:
+        await update.inline_query.answer(results, cache_time=0, is_personal=True)
+    except NetworkError as exc:
+        if "Event loop is closed" in str(exc):
+            return
+        raise
 
 async def clear_video(update: Update, context):
     """Clear stored video."""
@@ -154,11 +160,19 @@ from telegram.ext import ContextTypes
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
     """Global error handler to log and notify owner."""
     logger.exception("Exception while handling an update", exc_info=context.error)
-    try:
-        if OWNER_ID is not None:
+    # By default, avoid owner notifications in serverless/webhook mode to prevent noisy errors
+    if os.getenv('ENABLE_OWNER_NOTIFICATIONS') == '1' and OWNER_ID is not None:
+        try:
             await context.bot.send_message(chat_id=OWNER_ID, text=f"⚠️ Bot error: {context.error}")
-    except Exception as notify_exc:
-        logger.error(f"Failed to notify owner about error: {notify_exc}")
+        except NetworkError as exc:
+            # Ignore teardown errors from serverless runtime
+            if "Event loop is closed" in str(exc):
+                return
+            raise
+        except RuntimeError as exc:
+            if "Event loop is closed" in str(exc):
+                return
+            raise
 
 def main():
     """Start the bot."""
