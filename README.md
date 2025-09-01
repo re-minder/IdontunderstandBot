@@ -5,7 +5,7 @@ A simple Telegram bot that stores a video and allows you to send it in any chat 
 ## Features
 
 - Store one video at a time
-- Send the stored video in any chat using `@your_bot_username`
+- Send the stored video in any chat using `@nihuyaNeUnderstandBot`
 - Works in private chats, groups, and channels
 - No need to leave your current conversation
 
@@ -16,18 +16,9 @@ A simple Telegram bot that stores a video and allows you to send it in any chat 
 pip install -r requirements.txt
 ```
 
-2. Set up your bot token:
-   - Create a bot with [@BotFather](https://t.me/botfather) on Telegram
-   - Copy the bot token
-   - Create a `.env` file and add: `BOT_TOKEN=your_bot_token_here`
+2. The `.env` file is already configured with your bot token.
 
-3. Enable inline mode:
-   - Message [@BotFather](https://t.me/botfather)
-   - Send `/setinline`
-   - Select your bot
-   - Set placeholder text: "Send stored video"
-
-4. Run the bot:
+3. Run the bot:
 ```bash
 python bot.py
 ```
@@ -35,20 +26,16 @@ python bot.py
 ## Usage
 
 1. **Store a video**: Send a video to your bot
-2. **Send in any chat**: Type `@your_bot_username` in any chat and click "Send stored video"
+2. **Send in any chat**: Type `@nihuyaNeUnderstandBot` in any chat and click "Send stored video"
 
 ## Commands
 
 - `/start` - Start the bot
-- `/help` - Show help message
-- `/clearVideo` - Clear stored video
-- `/videoStatus` - Check if video is stored
+- `/status` - Check if video is stored
+- `/clear` - Clear stored video
 
-## Project Structure
+## How it works
 
-- `bot.py` - Main bot file
-- `config.py` - Configuration settings
-- `handlers/` - Command and video handlers
-- `requirements.txt` - Python dependencies
-- `.env` - Environment variables (create this file)
-- `.gitignore` - Git ignore file
+1. Send a video to the bot → It gets stored
+2. In any chat, type `@nihuyaNeUnderstandBot` → See "Send stored video" option
+3. Click it → Video appears in that chat!
