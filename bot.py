@@ -170,6 +170,8 @@ async def inline_query_handler(update: Update, context):
         await update.inline_query.answer(results, cache_time=0, is_personal=True)
         _elapsed_ms = int((time.time() - _start_inline) * 1000)
         logger.info(f"Inline answer sent in {_elapsed_ms}ms (has_video={bool(stored_video)})")
+        if _elapsed_ms > 4000:
+            logger.warning(f"Slow inline answer: {_elapsed_ms}ms (risk of client timeout)")
     except NetworkError as exc:
         if "Event loop is closed" in str(exc):
             _elapsed_ms = int((time.time() - _start_inline) * 1000)

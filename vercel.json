@@ -2,6 +2,12 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/bot" }
   ],
+  "functions": {
+    "api/*.py": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
   "crons": [
     {
       "path": "/api/bot",
