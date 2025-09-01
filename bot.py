@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import time
+import hashlib
 from dotenv import load_dotenv
 from telegram import Update, InlineQueryResultVideo, InputTextMessageContent, InputFile, InlineQueryResultCachedVideo, InlineQueryResultArticle
 from telegram.ext import Application, CommandHandler, MessageHandler, InlineQueryHandler, filters
@@ -155,9 +156,26 @@ async def inline_query_handler(update: Update, context):
         ]
     else:
         # Video is stored
-        # Add a small time bucket to the result id to mitigate Telegram client cache per chat
-        time_bucket = int(time.time() // 3)  # 3-second buckets for most aggressive cache busting
+        # Build a per-context unique id seed to avoid client-side dedup across chats
+        try:
+            from_user_id = update.inline_query.from_user.id if update.inline_query and update.inline_query.from_user else 0
+            chat_type = getattr(update.inline_query, 'chat_type', '') or ''
+        except Exception:
+            from_user_id = 0
+            chat_type = ''
+        id_seed = f"{stored_video}|{from_user_id}|{chat_type}"
+        seed_hash = hashlib.sha1(id_seed.encode('utf-8')).hexdigest()[-12:]
+        # Add a small time bucket to mitigate Telegram client cache per chat
+        time_bucket = int(time.time() // 3)  # 3-second buckets for aggressive cache busting
+        unique_id = f"vid_{seed_hash}_{time_bucket}"
         results = [
+            # Put the real video first when available
+            InlineQueryResultCachedVideo(
+                id=unique_id,
+                title="Send stored video",
+                description="Click to send the stored video",
+                video_file_id=stored_video
+            ),
             # Instant lightweight fallback so the client always renders something
             InlineQueryResultArticle(
                 id=f"fallback_{int(time.time())}",
@@ -166,12 +184,6 @@ async def inline_query_handler(update: Update, context):
                 input_message_content=InputTextMessageContent(
                     "If the video didn’t load, wait a second and type the bot handle again."
                 ),
-            ),
-            InlineQueryResultCachedVideo(
-                id=f"vid_{stored_video[-32:]}_{time_bucket}",
-                title="Send stored video",
-                description="Click to send the stored video",
-                video_file_id=stored_video
             )
         ]
     
