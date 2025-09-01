@@ -1,6 +1,6 @@
 import os
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, InlineQueryHandler, filters
 
@@ -53,6 +53,12 @@ async def health() -> dict:
 
 @app.post("/")
 async def webhook(request: Request) -> dict:
+    # Optional secret verification (recommended)
+    secret = os.getenv("WEBHOOK_SECRET")
+    if secret:
+        header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+        if header_secret != secret:
+            raise HTTPException(status_code=403, detail="Forbidden")
     data = await request.json()
     update = Update.de_json(data, ptb_app.bot)
     await ptb_app.process_update(update)
