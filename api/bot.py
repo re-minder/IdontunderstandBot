@@ -51,27 +51,33 @@ async def health_root() -> dict:
                 logger.info(f"State loaded on GET / in {state_ms}ms")
             except Exception as exc:
                 logger.exception("Failed to load state on GET /", exc_info=exc)
-            # Warm Telegram network/TLS by calling get_me
+            # Warm Telegram and Redis in parallel where possible
             try:
-                bot_start_ns = _t.time()
-                await ptb_app.bot.get_me()
-                bot_ms = int((_t.time() - bot_start_ns) * 1000)
-                logger.info(f"Bot get_me warmed in {bot_ms}ms on GET /")
-            except Exception as exc:
-                logger.exception("Failed to warm bot.get_me on GET /", exc_info=exc)
-            # Warm Upstash Redis (if configured) to pre-establish outbound connection
-            try:
-                if getattr(bot_module, 'redis_client', None) is not None:
+                import asyncio as _a
+                async def _warm_getme():
+                    try:
+                        bot_start_ns = _t.time()
+                        await ptb_app.bot.get_me()
+                        return int((_t.time() - bot_start_ns) * 1000)
+                    except Exception as exc_inner:
+                        logger.exception("Failed to warm bot.get_me on GET /", exc_info=exc_inner)
+                        return None
+                async def _warm_redis():
+                    if getattr(bot_module, 'redis_client', None) is None:
+                        return None
                     kv_start_ns = _t.time()
                     try:
-                        # Lightweight GET; key may or may not exist
-                        bot_module.redis_client.get('stored_video')
+                        await _a.to_thread(bot_module.redis_client.get, 'stored_video')
                     except Exception:
                         pass
-                    kv_ms = int((_t.time() - kv_start_ns) * 1000)
-                    logger.info(f"Redis warm GET completed in {kv_ms}ms on GET /")
+                    return int((_t.time() - kv_start_ns) * 1000)
+                res_getme_ms, res_kv_ms = await _a.gather(_warm_getme(), _warm_redis())
+                if res_getme_ms is not None:
+                    logger.info(f"Bot get_me warmed in {res_getme_ms}ms on GET /")
+                if res_kv_ms is not None:
+                    logger.info(f"Redis warm GET completed in {res_kv_ms}ms on GET /")
             except Exception as exc:
-                logger.exception("Failed to warm Redis on GET /", exc_info=exc)
+                logger.exception("Parallel warm failed on GET /", exc_info=exc)
         except Exception as exc:
             logger.exception("Failed to initialize PTB app on GET /", exc_info=exc)
             # Still return ok
@@ -96,26 +102,33 @@ async def health_full(request: Request) -> dict:
                 logger.info(f"State loaded on GET /api/bot in {state_ms}ms")
             except Exception as exc:
                 logger.exception("Failed to load state on GET /api/bot", exc_info=exc)
-            # Warm Telegram network/TLS by calling get_me
+            # Warm Telegram and Redis in parallel where possible
             try:
-                bot_start_ns = _t.time()
-                await ptb_app.bot.get_me()
-                bot_ms = int((_t.time() - bot_start_ns) * 1000)
-                logger.info(f"Bot get_me warmed in {bot_ms}ms on GET /api/bot")
-            except Exception as exc:
-                logger.exception("Failed to warm bot.get_me on GET /api/bot", exc_info=exc)
-            # Warm Upstash Redis (if configured) to pre-establish outbound connection
-            try:
-                if getattr(bot_module, 'redis_client', None) is not None:
+                import asyncio as _a
+                async def _warm_getme():
+                    try:
+                        bot_start_ns = _t.time()
+                        await ptb_app.bot.get_me()
+                        return int((_t.time() - bot_start_ns) * 1000)
+                    except Exception as exc_inner:
+                        logger.exception("Failed to warm bot.get_me on GET /api/bot", exc_info=exc_inner)
+                        return None
+                async def _warm_redis():
+                    if getattr(bot_module, 'redis_client', None) is None:
+                        return None
                     kv_start_ns = _t.time()
                     try:
-                        bot_module.redis_client.get('stored_video')
+                        await _a.to_thread(bot_module.redis_client.get, 'stored_video')
                     except Exception:
                         pass
-                    kv_ms = int((_t.time() - kv_start_ns) * 1000)
-                    logger.info(f"Redis warm GET completed in {kv_ms}ms on GET /api/bot")
+                    return int((_t.time() - kv_start_ns) * 1000)
+                res_getme_ms, res_kv_ms = await _a.gather(_warm_getme(), _warm_redis())
+                if res_getme_ms is not None:
+                    logger.info(f"Bot get_me warmed in {res_getme_ms}ms on GET /api/bot")
+                if res_kv_ms is not None:
+                    logger.info(f"Redis warm GET completed in {res_kv_ms}ms on GET /api/bot")
             except Exception as exc:
-                logger.exception("Failed to warm Redis on GET /api/bot", exc_info=exc)
+                logger.exception("Parallel warm failed on GET /api/bot", exc_info=exc)
         except Exception as exc:
             logger.exception("Failed to initialize PTB app on GET /api/bot", exc_info=exc)
             # Still return ok
@@ -127,24 +140,31 @@ async def health_full(request: Request) -> dict:
     if warm_flag == "1":
         try:
             import time as _t
-            bot_start_ns = _t.time()
-            await ptb_app.bot.get_me()
-            bot_ms = int((_t.time() - bot_start_ns) * 1000)
-            logger.info(f"Forced warm: bot.get_me took {bot_ms}ms on GET /api/bot?warm=1")
-        except Exception as exc:
-            logger.exception("Forced warm failed on GET /api/bot?warm=1", exc_info=exc)
-        # Force warm Redis as well
-        try:
-            if getattr(bot_module, 'redis_client', None) is not None:
+            import asyncio as _a
+            async def _warm_getme():
+                try:
+                    bot_start_ns = _t.time()
+                    await ptb_app.bot.get_me()
+                    return int((_t.time() - bot_start_ns) * 1000)
+                except Exception as exc_inner:
+                    logger.exception("Forced warm failed for get_me on GET /api/bot?warm=1", exc_info=exc_inner)
+                    return None
+            async def _warm_redis():
+                if getattr(bot_module, 'redis_client', None) is None:
+                    return None
                 kv_start_ns = _t.time()
                 try:
-                    bot_module.redis_client.get('stored_video')
+                    await _a.to_thread(bot_module.redis_client.get, 'stored_video')
                 except Exception:
                     pass
-                kv_ms = int((_t.time() - kv_start_ns) * 1000)
-                logger.info(f"Forced warm: Redis GET took {kv_ms}ms on GET /api/bot?warm=1")
+                return int((_t.time() - kv_start_ns) * 1000)
+            res_getme_ms, res_kv_ms = await _a.gather(_warm_getme(), _warm_redis())
+            if res_getme_ms is not None:
+                logger.info(f"Forced warm: bot.get_me took {res_getme_ms}ms on GET /api/bot?warm=1")
+            if res_kv_ms is not None:
+                logger.info(f"Forced warm: Redis GET took {res_kv_ms}ms on GET /api/bot?warm=1")
         except Exception as exc:
-            logger.exception("Forced warm Redis failed on GET /api/bot?warm=1", exc_info=exc)
+            logger.exception("Forced parallel warm failed on GET /api/bot?warm=1", exc_info=exc)
     return {"ok": True}
 
 

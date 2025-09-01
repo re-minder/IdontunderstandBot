@@ -8,7 +8,7 @@ import json
 import logging
 import time
 from dotenv import load_dotenv
-from telegram import Update, InlineQueryResultVideo, InputTextMessageContent, InputFile, InlineQueryResultCachedVideo
+from telegram import Update, InlineQueryResultVideo, InputTextMessageContent, InputFile, InlineQueryResultCachedVideo, InlineQueryResultArticle
 from telegram.ext import Application, CommandHandler, MessageHandler, InlineQueryHandler, filters
 from telegram.error import NetworkError
 
@@ -156,8 +156,17 @@ async def inline_query_handler(update: Update, context):
     else:
         # Video is stored
         # Add a small time bucket to the result id to mitigate Telegram client cache per chat
-        time_bucket = int(time.time() // 30)  # 30-second buckets to reduce stale results
+        time_bucket = int(time.time() // 10)  # 10-second buckets to reduce stale results further
         results = [
+            # Instant lightweight fallback so the client always renders something
+            InlineQueryResultArticle(
+                id=f"fallback_{int(time.time())}",
+                title="Loading video… tap if it doesn't appear",
+                description="This shows instantly; try again if video is still loading",
+                input_message_content=InputTextMessageContent(
+                    "If the video didn’t load, wait a second and type the bot handle again."
+                ),
+            ),
             InlineQueryResultCachedVideo(
                 id=f"vid_{stored_video[-32:]}_{time_bucket}",
                 title="Send stored video",
