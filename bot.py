@@ -16,13 +16,16 @@ load_dotenv()
 # Configure logging to file
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
+    level=logging.WARNING,
     handlers=[
         logging.FileHandler('bot.log'),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
+# Suppress noisy third-party loggers
+logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("telegram").setLevel(logging.WARNING)
 
 # Global variable to store the video
 stored_video = None
@@ -75,7 +78,7 @@ async def store_video_handler(update: Update, context):
         return
     
     stored_video = update.message.video.file_id
-    logger.info(f"Video stored: {stored_video}")
+    logger.info("Video stored successfully")
     save_state()
     
     await update.message.reply_text(
@@ -86,6 +89,7 @@ async def inline_query_handler(update: Update, context):
     """Handle inline queries."""
     global stored_video
     
+    logger.info("Inline query received")
     logger.info(f"Inline query - stored video: {stored_video}")
     logger.info(f"Inline query - stored video type: {type(stored_video)}")
     logger.info(f"Inline query - stored video is None: {stored_video is None}")

@@ -7,8 +7,11 @@ from telegram.ext import Application, CommandHandler, MessageHandler, InlineQuer
 # Import handlers and state from existing bot module
 import bot as bot_module
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
+# Suppress noisy third-party loggers
+logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("telegram").setLevel(logging.WARNING)
 
 TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
@@ -33,7 +36,7 @@ async def on_startup() -> None:
     # Initialize and start PTB application once on cold start
     await ptb_app.initialize()
     await ptb_app.start()
-    logger.info("PTB Application initialized (webhook mode)")
+    logger.info("PTB Application initialized")
 
 
 @app.on_event("shutdown")
