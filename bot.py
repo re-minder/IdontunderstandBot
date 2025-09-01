@@ -6,10 +6,24 @@ Simple Video Sending Bot
 import os
 import json
 import logging
+import time
 from dotenv import load_dotenv
 from telegram import Update, InlineQueryResultVideo, InputTextMessageContent, InputFile, InlineQueryResultCachedVideo
 from telegram.ext import Application, CommandHandler, MessageHandler, InlineQueryHandler, filters
 from telegram.error import NetworkError
+
+# Optional durable KV (Upstash Redis)
+REDIS_URL = os.getenv('UPSTASH_REDIS_REST_URL')
+REDIS_TOKEN = os.getenv('UPSTASH_REDIS_REST_TOKEN')
+redis_client = None
+if REDIS_URL and REDIS_TOKEN:
+    try:
+        from upstash_redis import Redis
+        redis_client = Redis(url=REDIS_URL, token=REDIS_TOKEN)
+    except Exception as exc:
+        # If client fails to init, fall back to JSON
+        redis_client = None
+        logging.getLogger(__name__).error(f"Failed to init Redis client: {exc}")
 
 # Load environment variables
 load_dotenv()
@@ -44,6 +58,19 @@ STATE_FILE_PATH = 'state.json'
 def load_state():
     """Load stored state from disk into memory."""
     global stored_video
+    # Prefer Redis if available
+    if redis_client is not None:
+        try:
+            value = redis_client.get('stored_video')
+            if isinstance(value, bytes):
+                value = value.decode('utf-8')
+            stored_video_local = value if value not in (None, "") else None
+            stored_video = stored_video_local
+            logger.info("State loaded from Redis")
+            return
+        except Exception as exc:
+            logger.error(f"Failed to load state from Redis: {exc}")
+    # Fallback to JSON file
     try:
         if os.path.exists(STATE_FILE_PATH):
             with open(STATE_FILE_PATH, 'r', encoding='utf-8') as f:
@@ -55,6 +82,17 @@ def load_state():
 
 def save_state():
     """Persist current state to disk."""
+    # Prefer Redis if available
+    if redis_client is not None:
+        try:
+            # Store empty string to represent None
+            value = stored_video if stored_video is not None else ""
+            redis_client.set('stored_video', value)
+            logger.info("State saved to Redis")
+            return
+        except Exception as exc:
+            logger.error(f"Failed to save state to Redis: {exc}")
+    # Fallback to JSON file (may be ephemeral in serverless)
     try:
         with open(STATE_FILE_PATH, 'w', encoding='utf-8') as f:
             json.dump({'stored_video': stored_video}, f)
@@ -116,9 +154,11 @@ async def inline_query_handler(update: Update, context):
         ]
     else:
         # Video is stored
+        # Add a small time bucket to the result id to mitigate Telegram client cache per chat
+        time_bucket = int(time.time() // 300)  # 5-minute buckets
         results = [
             InlineQueryResultCachedVideo(
-                id=f"vid_{stored_video[-32:]}",
+                id=f"vid_{stored_video[-32:]}_{time_bucket}",
                 title="Send stored video",
                 description="Click to send the stored video",
                 video_file_id=stored_video

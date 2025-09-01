@@ -48,6 +48,11 @@ async def _process_webhook(request: Request) -> dict:
             await ptb_app.initialize()
             _initialized = True
             logger.info("PTB Application initialized (lazy)")
+            # Load persisted state (Redis if configured, else JSON) on cold start
+            try:
+                bot_module.load_state()
+            except Exception as exc:
+                logger.exception("Failed to load state on startup", exc_info=exc)
         except Exception as exc:
             logger.exception("Failed to initialize PTB app", exc_info=exc)
             # Still return 200 to avoid Telegram retries storm
