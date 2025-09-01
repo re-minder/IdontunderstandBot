@@ -47,12 +47,15 @@ async def on_shutdown() -> None:
 
 
 @app.get("/")
-async def health() -> dict:
+async def health_root() -> dict:
+    return {"ok": True}
+
+@app.get("/api/bot")
+async def health_full() -> dict:
     return {"ok": True}
 
 
-@app.post("/")
-async def webhook(request: Request) -> dict:
+async def _process_webhook(request: Request) -> dict:
     # Optional secret verification (recommended)
     secret = os.getenv("WEBHOOK_SECRET")
     if secret:
@@ -63,5 +66,15 @@ async def webhook(request: Request) -> dict:
     update = Update.de_json(data, ptb_app.bot)
     await ptb_app.process_update(update)
     return {"ok": True}
+
+
+@app.post("/")
+async def webhook_root(request: Request) -> dict:
+    return await _process_webhook(request)
+
+
+@app.post("/api/bot")
+async def webhook_full(request: Request) -> dict:
+    return await _process_webhook(request)
 
 
