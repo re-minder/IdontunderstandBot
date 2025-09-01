@@ -10,7 +10,7 @@
   },
   "crons": [
     {
-      "path": "/api/bot",
+      "path": "/api/bot?warm=1",
       "schedule": "*/1 * * * *"
     }
   ]

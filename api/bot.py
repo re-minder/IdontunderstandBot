@@ -65,7 +65,7 @@ async def health_root() -> dict:
     return {"ok": True}
 
 @app.get("/api/bot")
-async def health_full() -> dict:
+async def health_full(request: Request) -> dict:
     # Warm initialization on health check to reduce cold start latency
     global _initialized
     if not _initialized:
@@ -94,6 +94,20 @@ async def health_full() -> dict:
         except Exception as exc:
             logger.exception("Failed to initialize PTB app on GET /api/bot", exc_info=exc)
             # Still return ok
+    # Aggressive warm if explicitly requested even when already initialized
+    try:
+        warm_flag = request.query_params.get("warm")
+    except Exception:
+        warm_flag = None
+    if warm_flag == "1":
+        try:
+            import time as _t
+            bot_start_ns = _t.time()
+            await ptb_app.bot.get_me()
+            bot_ms = int((_t.time() - bot_start_ns) * 1000)
+            logger.info(f"Forced warm: bot.get_me took {bot_ms}ms on GET /api/bot?warm=1")
+        except Exception as exc:
+            logger.exception("Forced warm failed on GET /api/bot?warm=1", exc_info=exc)
     return {"ok": True}
 
 

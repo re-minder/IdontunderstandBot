@@ -156,7 +156,7 @@ async def inline_query_handler(update: Update, context):
     else:
         # Video is stored
         # Add a small time bucket to the result id to mitigate Telegram client cache per chat
-        time_bucket = int(time.time() // 60)  # 1-minute buckets to reduce stale results
+        time_bucket = int(time.time() // 30)  # 30-second buckets to reduce stale results
         results = [
             InlineQueryResultCachedVideo(
                 id=f"vid_{stored_video[-32:]}_{time_bucket}",
