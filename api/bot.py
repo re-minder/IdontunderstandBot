@@ -62,9 +62,19 @@ async def _process_webhook(request: Request) -> dict:
         header_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
         if header_secret != secret:
             raise HTTPException(status_code=403, detail="Forbidden")
-    data = await request.json()
-    update = Update.de_json(data, ptb_app.bot)
-    await ptb_app.process_update(update)
+    # Parse JSON body safely
+    try:
+        data = await request.json()
+    except Exception:
+        logger.warning("Webhook received non-JSON body")
+        return {"ok": True}
+
+    # Process update with PTB, never bubble errors to Telegram
+    try:
+        update = Update.de_json(data, ptb_app.bot)
+        await ptb_app.process_update(update)
+    except Exception as exc:
+        logger.exception("Error while processing update", exc_info=exc)
     return {"ok": True}
 
 
